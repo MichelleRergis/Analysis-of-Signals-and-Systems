@@ -1,0 +1,107 @@
+%Código en Matlab
+clear
+clc
+
+% Parámetros de grabación
+q = 5;  % Duración de la grabación en segundos
+f1 = 2500;  % Frecuencia para modulación (no se utiliza en análisis)
+
+% Grabar la voz por q segundos
+recObj = audiorecorder;
+disp('Start speaking.')
+recordblocking(recObj, q);
+disp('End of Recording.');
+
+% Reproducir la grabación
+play(recObj);
+
+% Obtener datos en arreglo de precisión doble
+myRecording = getaudiodata(recObj);
+% Eje de tiempo
+qa = recObj.TotalSamples;
+t = (0:q/qa:q-q/qa)';
+
+% Calcular la frecuencia de muestreo
+Ts = q/qa;  % Tiempo de muestreo
+fs = 1/Ts;  % Frecuencia de muestreo
+[na, nb] = size(t(:));  % na = número de puntos de la señal
+ff = fs*[0:na-1]/na - fs/2;
+
+% Gráfica de la forma de onda
+figure;
+plot(t, myRecording);
+xlabel('Time (secs)');
+ylabel('Amplitude (V)');
+title('Waveform of Recorded Voice');
+
+% Análisis Estadístico
+mean_val = mean(myRecording);
+var_val = var(myRecording);
+std_val = std(myRecording);
+skewness_val = skewness(myRecording); %valor del sesgo (o asimetría) de la distribución de los datos, y mide cómo están distribuidos los valores en torno a la media.
+kurtosis_val = kurtosis(myRecording); % indica si tu señal tiene más o menos valores extremos (amplitudes muy grandes o pequeñas) de lo esperado en una distribución normal.
+dispersion_val = var_val / std_val;
+
+% Histograma
+%{
+  El histograma es una representación gráfica de la distribución de frecuencias de los valores de los datos. 
+  En este caso:
+    
+    Te muestra cómo están distribuidas las amplitudes de la señal de tu voz.
+    Te ayuda a visualizar qué rangos de amplitud ocurren con más frecuencia.
+    Permite identificar si la señal es simétrica o sesgada, y si tiene valores atípicos o extremos.
+%}
+figure;
+histogram(myRecording, 50);
+xlabel('Amplitude');
+ylabel('Frequency');
+title('Histogram of Amplitude');
+
+% Función de Distribución Acumulada (CDF)
+figure;
+cdfplot(myRecording);
+xlabel('Amplitude');
+ylabel('CDF');
+title('Cumulative Distribution Function (CDF)');
+
+% Estimación de la PDF usando un estimador kernel
+figure;
+[f_pdf, xi_pdf] = ksdensity(myRecording);  % Estimación PDF
+plot(xi_pdf, f_pdf);
+xlabel('Amplitude');
+ylabel('PDF');
+title('Probability Density Function (PDF)');
+
+% Tabla de resultados
+stat_table = table(mean_val, var_val, std_val, skewness_val, ...
+    kurtosis_val, dispersion_val, 'VariableNames', ...
+    {'Mean', 'Variance', 'Std_Deviation', 'Skewness', ...
+    'Kurtosis', 'Dispersion'});
+
+disp('Statistical Analysis Results:');
+disp(stat_table);
+
+% Modulación de la señal (opcional, no afecta el análisis estadístico)
+cs = cos(2*pi*f1*t);
+mods = cs.*myRecording;
+figure;
+plot(ff, fftshift(abs(fft(myRecording))),'r') %Transformada Rápida de Fourier
+xlabel('Frequency (Hz)')
+ylabel('Magnitude (V)')
+title('Frequency Spectrum of Recorded Voice');
+% Autocorrelacion
+%{
+    La autocorrelación mide la similitud de la señal consigo misma en diferentes retardos 
+    de tiempo, lo que puede revelar patrones repetitivos o la periodicidad en la señal.
+%}
+
+% Calcular la autocorrelación de la señal grabada
+[autocorr, lags] = xcorr(myRecording, 'normalized');  % 'normalized' normaliza la autocorrelación
+
+% Graficar la autocorrelación
+figure;
+plot(lags, autocorr);
+xlabel('Lags');
+ylabel('Autocorrelation');
+title('Autocorrelation of Recorded Voice Signal');
+
